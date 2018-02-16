@@ -40,20 +40,20 @@ export default {
     },
 
     methods: {
-        hasChildren: function (item) {
+        hasChildren (item) {
             return item._children && item._children.length
         },
-        joinValue: function (value) {
+        joinValue (value) {
             if (Array.isArray(value)) return value.join(', ')
             return value
         }
     },
 
     computed: {
-        deeper: function () {
+        deeper () {
             return this.index += 1
         },
-        style: function () {
+        style () {
             if (this.deep === 1) return {}
             return {'marginLeft': (8 * this.deeper) + 'px'}
         }

@@ -1,5 +1,5 @@
 <template>
-  <svg xmlns="http://www.w3.org/2000/svg" :viewBox="viewbox" class="icon action__icon">
+    <svg xmlns="http://www.w3.org/2000/svg" :viewBox="viewbox" class="icon action__icon">
         <use :xlink:href="iconId"></use>
     </svg>
 </template>

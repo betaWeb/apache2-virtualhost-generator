@@ -43,6 +43,15 @@
     min-height: 100vh;
     font-family: 'Ubuntu';
   }
+
+  .success-color {
+    color: $success-color;
+  }
+
+  .error-color {
+    color: $error-color;
+  }
+
   .wrapper {
     position: absolute;
     width: 100%;
@@ -123,6 +132,14 @@
     stroke-linecap: round;
     stroke-linejoin: round;
     stroke: rgba($text-color, .7);
+
+    &.success-color {
+      stroke: $success-color;
+    }
+
+    &.error-color {
+      stroke: $error-color;
+    }
   }
 
   input, select, textarea {
@@ -130,7 +147,7 @@
     border: none;
     border-bottom: 2px solid rgba($main-color, .3334);
     padding: .25em .5em;
-    margin: 1em 0;
+    margin-bottom: 1em;
     width: 100%;
 
     &:focus {
@@ -149,5 +166,105 @@
     resize: vertical;
     min-height: 300px;
     max-height: 600px;
+  }
+
+  .input-group, .checkable-group {
+    width: 100%;
+    float: left;
+    display: block;
+  }
+
+  .input-group label {
+      position: relative;
+      width: 100%;
+      float: left;
+      display: block;
+      margin: .5em 0;
+  }
+
+  .checkable-group label {
+      position: relative;
+      display: inline-block;
+      margin: 1em 0;
+      user-select: none;
+      padding-left: 40px;
+      cursor: pointer;
+
+      &::before {
+        position: absolute;
+        vertical-align: middle;
+        content: '';
+        width: 32px;
+        height: 16px;
+        left: 0;
+        border-radius: 16px;
+        background-color: rgba($dark-color, .3);
+      }
+      &::after {
+        position: absolute;
+        content: '';
+        width: 16px;
+        height: 16px;
+        left: 0;
+        border-radius: 50%;
+        transition: transform .3s;
+      }
+  }
+
+  input[type="checkbox"], input[type="radio"] {
+    display: inline-block;
+    width: auto;
+    display:none;
+
+    & + label::after {
+      background-color: rgba($dark-color, .3);
+    }
+
+    &:checked + label::after {
+      background-color: $main-color;
+      transform: translateX(16px);
+    }
+  }
+
+  [type="submit"] {
+    float: right;
+    display: block;
+    background-color: transparent;
+    border: none;
+    color: $main-color;
+    font-weight: 600;
+    font-size: 1em;
+    padding: .667em 1em;
+    cursor: pointer;
+
+    &:hover {
+      color: rgba($main-color, .667);
+    }
+
+    &:focus, &:active {
+      box-shadow: none;
+      outline: none;
+    }
+  }
+
+  .btn {
+      font-size: .85em;
+      align-self: center;
+      background-color: transparent;
+      border: none;
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      text-align: center;
+      line-height: 36px;
+      cursor: pointer;
+
+      &:hover .action__icon {
+        stroke: $main-color;
+      }
+      &:focus, &:active {
+        box-shadow: none;
+        outline: none;
+      }
   }
 </style>

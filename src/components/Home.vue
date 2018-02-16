@@ -1,5 +1,6 @@
 <template>
     <div>
+        <Loader v-show="loader" />
         <div class="toolbar">
             <router-link class="toolbar__link" :to="{ name: 'vh.add' }">Ajouter un vhost</router-link>
         </div>
@@ -15,20 +16,7 @@
                     <Icon v-if="item.enabled" id="icon__check" :class="enabledCss(item.enabled)" />
                     <Icon v-else id="icon__cross" :class="enabledCss(item.enabled)" />
                 </div>
-                <div class="table__actions">
-                    <button class="action__btn" title="Editer la configuration">
-                        <Icon id="icon__edit" />
-                    </button>
-                    <button v-if="item.enabled" class="action__btn" title="Désactiver le site">
-                        <Icon id="icon__stop" />
-                    </button>
-                    <button v-if="!item.enabled" class="action__btn" title="Activer le site">
-                        <Icon id="icon__play" />
-                    </button>
-                    <button class="action__btn" title="Télécharger le fichier">
-                        <Icon id="icon__download" />
-                    </button>
-                </div>
+                <Actions :item="item" class="table__actions" />
             </li>
         </ul>
     </div>
@@ -37,9 +25,11 @@
 <script lang="babel">
 import VHMaganer from '../app/VHMaganer'
 import Icon from './Icon.vue'
+import Loader from './Loader.vue'
+import Actions from './Actions.vue'
 export default {
 
-    components: { Icon },
+    components: { Icon, Loader, Actions },
 
     data () {
         return {
@@ -49,19 +39,35 @@ export default {
     },
 
     methods: {
-        fetchList: async function () {
+        async fetchList () {
             this.list = await VHMaganer.all()
             this.loader = false
         },
+
+        enableItem (id) {
+            this.toggleItemState(id, true)
+        },
+
+        disableItem (id) {
+            this.toggleItemState(id, false)
+        },
+
         enabledCss: function (enabled = false) {
             let cls = ['enabled__icon']
             if (enabled) return [cls, ...['is-enabled']]
             return cls
+        },
+
+        toggleItemState (id, state) {
+            const item = this.list.find(i => i.id === id)
+            if (item) item.enabled = state
         }
     },
 
     async mounted () {
         await this.fetchList()
+        this.$root.$on('vh.enabled', ({ id }) => this.enableItem(id))
+        this.$root.$on('vh.disabled', ({ id }) => this.disableItem(id))
     }
 }
 </script>
@@ -143,23 +149,6 @@ export default {
                 display: flex;
                 justify-content: flex-end;
                 align-items: center;
-
-                .action__btn {
-                    font-size: .85em;
-                    align-self: center;
-                    background-color: transparent;
-                    border: none;
-                    width: 36px;
-                    height: 36px;
-                    padding: 0;
-                    text-align: center;
-                    line-height: 36px;
-                    cursor: pointer;
-
-                    &:hover .action__icon {
-                        stroke: $main-color;
-                    }
-                }
             }
         }
     }

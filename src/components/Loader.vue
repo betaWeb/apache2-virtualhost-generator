@@ -1,7 +1,7 @@
 <template>
     <div class="loader">
         <div class="loader__wrapper">
-            <p class="loader__content"></p>
+            <p class="loader__content" data-text="Chargement..."></p>
         </div>
     </div>
 </template>
@@ -16,7 +16,8 @@
         bottom: 0;
         left: 0;
         vertical-align: middle;
-        background-color: rgba($dark-color, .25);
+        background-color: rgba($black-color, .8);
+        z-index: 1000;
 
         .loader__wrapper {
             position: relative;
@@ -27,13 +28,12 @@
                 position: absolute;
                 top: 50%;
                 left: 50%;
-                transform: translate3d(-50%, -50%, 0);
-                border: 6px solid rgba($black-color, .25);
-                // border-top-color: $main-color;
                 width: 60px;
                 height: 60px;
+                transform: translate3d(-50%, -50%, 0);
+                border: 6px solid rgba($white-color, .25);
+                height: 60px;
                 border-radius: 60px;
-                // animation: rotate 1.7s infinite;
 
                 &::before {
                     content: '';
@@ -49,6 +49,14 @@
                     border: 6px solid transparent;
                     border-top-color: $main-color;
                     animation: rotate 1.7s infinite;
+                }
+
+                &::after {
+                    position: absolute;
+                    content: attr(data-text);
+                    height: 20px;
+                    bottom: -40px;
+                    left: -50%;
                 }
             }
         }

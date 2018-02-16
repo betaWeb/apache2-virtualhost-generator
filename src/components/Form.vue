@@ -1,30 +1,69 @@
 <template>
-    <div>
+    <div class="vh__form">
+        <Loader v-show="loader" />
         <div class="toolbar">
             <router-link class="toolbar__link back__link" :to="{ name: 'vh.index' }">Retour</router-link>
         </div>
-        <form class="form" action="/api/vh/add" @submit="handleSubmit">
+        <form class="form" @submit.prevent="handleSubmit">
             <h4>{{ title }}</h4>
             <div class="input-group">
                 <label for="filename">Nom du fichier</label>
-                <input type="text" name="filename" id="filename" v-model="item.filename">
+                <input type="text" name="filename" id="filename" v-model="item.filename" required>
             </div>
-            <div class="input-group">
-                <label for="content">Contenu</label>
-                <textarea name="content" id="content" cols="30" rows="10" v-model="item.content" :value="parsed" ref="content" @keyup.prevent="setContent"></textarea>
+            <div class="input-group editor__field" :class="{'has__error': hasConfigError}">
+                <label for="content">
+                    <span>Contenu</span>
+                    <button class="btn btn__prevContent" title="Annuler l'action (CTRL+Z)" @click.prevent="undo">
+                        <Icon id="icon__undo" />
+                    </button>
+                    <button class="btn btn__nextContent" title="Refaire l'action" @click.prevent="redo">
+                        <Icon id="icon__redo" />
+                    </button>
+                    <!-- <button v-if="configtest === null" class="btn" title="Tester la configuration" @click.prevent="getConfigtest"> -->
+                        <Icon v-if="configtest === null" id="icon__zap" />
+                    <!-- </button> -->
+                    <span v-if="configtest === true" title="Configuration valide">
+                        <Icon  id="icon__check" :class="'success-color'" />
+                    </span>
+                    <span v-if="hasConfigError" title="Erreur de configuration">
+                        <Icon id="icon__cross" :class="'error-color'" />
+                    </span>
+                </label>
+                <textarea name="content" id="content" cols="30" rows="10" ref="content" v-model="item.parsed" required></textarea>
+                <span v-if="hasConfigError" class="content__error error-color ">{{ configtest }}</span>
+                <span class="editor__helper">Rechercher: CTRL+F</span>
             </div>
-            <div class="input-group">
-                <label for="enabled">Activé ?</label>
+            <div class="checkable-group">
                 <input type="checkbox" name="enabled" id="enabled" v-model="item.enabled">
+                <label for="enabled">Activer la configuration</label>
+            </div>
+            <div v-if="editing" class="checkable-group">
+                <input type="checkbox" name="comments" id="comments" v-model="item.comments">
+                <label for="comments">Conserver les commentaires</label>
+            </div>
+            <div class="input-group">
+                <button type="submit">Enregistrer</button>
             </div>
         </form>
     </div>
 </template>
 
 <script>
+import CodeMirror from '../../node_modules/codemirror/lib/codemirror.js'
+import '../../node_modules/codemirror/mode/xml/xml.js'
+import '../../node_modules/codemirror/addon/search/search.js'
+import '../../node_modules/codemirror/addon/search/searchcursor.js'
+import '../../node_modules/codemirror/addon/search/jump-to-line.js'
+import '../../node_modules/codemirror/addon/dialog/dialog.js'
 import VHMaganer from '../app/VHMaganer'
+import debounce from 'lodash.debounce'
+import throttle from 'lodash.throttle'
+import Loader from './Loader.vue'
+import Icon from './Icon.vue'
 
 export default {
+
+    components: { Loader, Icon },
 
     data: function () {
         return {
@@ -33,42 +72,87 @@ export default {
                 id: null,
                 filename: null,
                 parsed: null,
-                enabled: false
+                enabled: false,
+                comments: false
             },
-            editing: false
+            editor: null,
+            editing: false,
+            configtest: null,
+            lineError: null
         }
     },
 
     methods: {
 
-        fetchItem: async function () {
-            this.item = await VHMaganer.find(this.$route.params.id)
+        async fetchItem () {
+            const response = await VHMaganer.find(this.$route.params.id)
+            this.item = {...this.item, ...response}
+            this.initEditor(this.parsed)
+        },
+
+        async handleSubmit (e) {
+            e.preventDefault()
+            this.loader = true
+
+            const data = {
+                id: this.item.id,
+                filename: this.item.filename,
+                enabled: this.item.enabled,
+                content: this.editor.getValue()
+            }
+            const { response } = this.editing 
+                ? await VHMaganer.update(this.item.id, data)
+                : await VHMaganer.store(data)
+
+            this.getConfigtest()
+        },
+
+        setContent (content, undo = false) {
+            if (this.configtest !== null) this.configtest = null
+            let { line, ch } = this.editor.getCursor()
+            this.item.content = content
+            if (this.lineError !== null) {
+                this.editor.removeLineClass(this.lineError, 'wrap', 'error__bg')
+                this.lineError = null
+            }
+            this.$nextTick(() => this.editor.setCursor(line, ch))
+        },
+
+        undo () { this.editor.undo() },
+
+        redo () { this.editor.redo() },
+
+        async getConfigtest () {
+            this.loader = true
+            this.configtest = (await VHMaganer.configtest()).response || false
+            if (this.hasConfigError) {
+                this.lineError = VHMaganer.getLineError(this.configtest)
+                if (this.lineError !== null) this.editor.addLineClass(this.lineError, 'wrap', 'error__bg')
+            }
             this.loader = false
         },
 
-        handleSubmit: function (e) {
-            e.preventDefault()
-            console.log(e.target.action)
+        initEditor (value = '') {
+            const textarea = this.$refs.content
+            if (!textarea) return
+            this.editor = CodeMirror(el => textarea.parentNode.replaceChild(el, textarea), {
+                value,
+                mode: "xml",
+                theme: "dracula",
+                tabSize: 8,
+                lineNumbers: true
+            })
+
+            this.editor.on('keyup', debounce((_instance, obj) => this.setContent(_instance.getValue()), 300))
         },
 
-        setContent: function (e) {
-            this.item.content = e.target.value
-            console.log(this.item.content)
-        },
-        
-        enableTab: function () {
-            var el = this.$refs.content
-            if (!el) return
-            el.onkeydown = function(e) {
-                if (e.keyCode !== 9) return
-                let val = this.value
-                let start = this.selectionStart
-                let end = this.selectionEnd
-
-                this.value = val.substring(0, start) + '\t' + val.substring(end)
-                this.selectionStart = this.selectionEnd = start + 1
-                return false
-            }
+        processParsed () {
+            if (!this.item.content) return ''
+            if (this.item.comments === true) return this.item.content
+            return this.item.content
+                .split("\n")
+                .filter(item => item.trim().charAt(0) != '#')
+                .join("\n")
         }
 
     },
@@ -80,26 +164,109 @@ export default {
         },
 
         parsed () {
-            if (!this.item.content) return ''
-            let parsed = this.item.content
-                .split("\n")
-                .filter(item => item.trim() != '')
-                .filter(item => item.trim().charAt(0) != '#')
-                .join("\n")
-            return parsed
+            return this.processParsed()
+        },
+
+        hasConfigError () {
+            return this.configtest !== null && this.configtest !== true
         }
     },
 
     mounted () {
         this.editing = Boolean(this.$route.params.id !== undefined)
-        if (this.editing) this.item = this.fetchItem()
-        this.enableTab()
+        if (this.editing) this.fetchItem()
+        else this.initEditor()
+        this.loader = false
+
+        this.$watch('item', throttle(({ comments }) => this.editor.setValue(this.parsed), 300), { deep: true })
     }
 }
 </script>
 
 <style lang="scss">
-    .form {
-        padding: 0 2em;
+    @import '../../node_modules/codemirror/lib/codemirror.css';
+    @import '../../node_modules/codemirror/theme/dracula.css';
+    @import '../../node_modules/codemirror/addon/search/matchesonscrollbar.css';
+    @import '../../node_modules/codemirror/addon/dialog/dialog.css';
+    @import '../../static/scss/_variables.scss';
+
+    .vh__form {
+        .CodeMirror {
+            width: 100%;
+            display: block;
+            float: left;
+            padding: 1em 0;
+        }
+
+        .form {
+            float: left;
+            display: block;
+            width: 100%;
+            padding: 0 2em 2em;
+
+            .editor__field {
+                position: relative;
+
+                &.has__error .CodeMirror {
+                    padding-bottom: 50px;
+
+                    .CodeMirror-scroll {
+                        overflow: hidden !important;
+                    }
+                }
+
+                .error__bg {
+                    background-color: $error-color;
+                }
+            }
+
+            .editor__helper {
+                display: block;
+                float: right;
+                height: 20px;
+                line-height: 20px;
+                padding: 0 .5em;
+                font-size: .7em;
+                color: rgba($text-color, .667);
+                font-style: italic;
+            }
+
+            .content__error {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                top: auto;
+                width: 100%;
+                font-size: .85em;
+                font-style: italic;
+                height: 50px;
+                margin: 0;
+                padding: .25em 1em;
+                background-color: transparent;
+                transform: translateY(-20px);
+                z-index: 100;
+                overflow-y: auto;
+            }
+
+            .btn, .action__icon {
+                width: 24px;
+                height: 24px;
+                line-height: 24px;
+                vertical-align: middle;
+                position: absolute;
+                right: 0;
+                top: 50%;
+                transform: translateY(-50%);
+
+                &.btn__prevContent {
+                    right: 48px;
+                }
+
+                &.btn__nextContent {
+                    right: 24px;
+                }
+            }
+        }
     }
 </style>

@@ -5,15 +5,23 @@
   "author": "Cyprien GLEPIN <cyprien.glepin@gmail.com>",
   "private": true,
   "scripts": {
+    "serve:dev": "forever -w start server.js",
+    "serve:prod": "forever start server.js",
+    "serve:stop": "forever stop server.js",
+    "serve:stopall": "forever stopall",
     "dev": "webpack-dev-server --inline --progress --config build/webpack.dev.conf.js",
     "start": "npm run dev",
     "build": "node build/build.js"
   },
   "dependencies": {
     "apacheconf": "0.0.5",
+    "body-parser": "^1.18.2",
+    "codemirror": "^5.34.0",
     "cors": "^2.8.4",
     "express": "^4.16.2",
     "glob-promise": "^3.3.0",
+    "lodash.debounce": "^4.0.8",
+    "lodash.throttle": "^4.1.1",
     "node-dir": "^0.1.17",
     "vue": "^2.5.2",
     "vue-router": "^3.0.1"
@@ -32,7 +40,7 @@
     "copy-webpack-plugin": "^4.0.1",
     "css-loader": "^0.28.0",
     "extract-text-webpack-plugin": "^3.0.0",
-    "file-loader": "^1.1.4",
+    "file-loader": "^1.1.6",
     "friendly-errors-webpack-plugin": "^1.6.1",
     "html-webpack-plugin": "^2.30.1",
     "node-notifier": "^5.1.2",

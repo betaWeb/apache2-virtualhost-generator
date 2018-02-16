@@ -1,25 +1,14 @@
 <template>
   <div>
-      <loader v-show="loader"></loader>
+      <Loader v-show="loader" />
       <div v-show="!loader && item">
-        <div class="toolbar">
+        <div class="toolbar toolbar__show">
             <router-link class="toolbar__link back__link" :to="{ name: 'vh.index'}">Retour</router-link>
-            <router-link class="toolbar__link" :to="{ name: 'vh.edit', params: {id: item.id}}" title="Editer la configuration">
-                <Icon id="icon__edit" />
-            </router-link>
-            <router-link v-if="item.enabled" class="toolbar__link" :to="{ name: 'vh.edit', params: {id: item.id}}" title="Désactiver le site">
-                <Icon id="icon__stop" />
-            </router-link>
-            <router-link v-else class="toolbar__link" :to="{ name: 'vh.edit', params: {id: item.id}}" title="Activer le site">
-                <Icon id="icon__play" />
-            </router-link>
-            <router-link class="toolbar__link" :to="{ name: 'vh.edit', params: {id: item.id}}" title="Télécharger le fichier">
-                <Icon id="icon__download" />
-            </router-link>
+            <Actions :item="item" class="toolbar__actions" />
         </div>
         <div class="info">
             <p><strong>Nom du fichier</strong>&nbsp;:&nbsp;&nbsp;<span>{{ item.filename }}</span></p>
-            <p><strong>Chemin complet</strong>&nbsp;:&nbsp;&nbsp;<span>{{ item.path }}</span></p>
+            <p><strong>Chemin complet</strong>&nbsp;:&nbsp;&nbsp;<span>{{ item.filePath }}</span></p>
             <p v-if="item.enabled"><strong>Activé</strong>&nbsp;:&nbsp;&nbsp;<span>Oui <small>(<em>{{ item.enabled }}</em>)</small></span></p>
             <p><strong>Détails&nbsp;:</strong></p>
             <List :list="item.parsed" />
@@ -32,9 +21,10 @@
 import Loader from './Loader.vue'
 import List from './List.vue'
 import Icon from './Icon.vue'
+import Actions from './Actions.vue'
 import VHMaganer from '../app/VHMaganer'
 export default {
-    components: { Loader, List, Icon },
+    components: { Loader, List, Icon, Actions },
 
     data () {
         return {
@@ -42,6 +32,7 @@ export default {
             item: {
                 id: null,
                 filename: null,
+                filePath: null,
                 content: null,
                 parsed: null,
                 enabled: false
@@ -69,14 +60,20 @@ export default {
         padding: 0 2em;
     }
 
-    .toolbar .action__icon {
-        width: 28px;
-        height: 28px;
-        margin: 0 2px;
-        transition: stroke .4s;
+    .toolbar__show {
+        .toolbar__actions {
+            float: right;
 
-        &:hover {
-            stroke: $main-color;
+            .action__icon {
+                width: 28px;
+                height: 28px;
+                margin: 0 2px;
+                transition: stroke .4s;
+
+                &:hover {
+                    stroke: $main-color;
+                }
+            }
         }
     }
 </style>
