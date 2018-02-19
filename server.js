@@ -1,13 +1,16 @@
+require('dotenv').config()
+
+global.config = require('./app/config')
+
 const express = require('express')
 const cors = require('cors')
 const bodyParser = require('body-parser')
 const { readFileSync } = require('fs')
-const config = require('./app/config')
 const VirtualHostsHandler = require('./app/src/VirtualHostsHandler')
 const { success, error } = require('./app/src/Utils')
 const api = express()
 const vh = new VirtualHostsHandler
-const env = process.env.NODE_ENV || 'development'
+const env = process.env.APP_ENV || 'development'
 
 api.use(cors())
 api.use(bodyParser.json())
@@ -126,11 +129,11 @@ api.put('/api/vh/:id/disable', async (req, res) => {
     return res.finish(json)
 })
 
-api.listen(config.api.port, () => console.log(`API started on http://localhost:${config.api.port}`))
+api.listen(config.api.port, () => console.log(`API started on ${config.api.protocol}://${config.api.host}:${config.api.port}`))
 
 if (env === 'production') {
     const app = express()
     app.use(express.static(__dirname + '/dist/'));
     app.get('/', (req, res) => res.sendFile(__dirname + '/dist/index.html'))
-    app.listen(config.app.port, () => console.log(`App started on http://localhost:${config.app.port}`))
+    app.listen(config.app.port, () => console.log(`App started on ${config.app.protocol}://localhost:${config.app.port}`))
 }

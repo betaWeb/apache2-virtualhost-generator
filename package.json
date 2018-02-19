@@ -5,12 +5,9 @@
   "author": "Cyprien GLEPIN <cyprien.glepin@gmail.com>",
   "private": true,
   "scripts": {
-    "serve:dev": "forever -w start server.js",
-    "serve:prod": "NODE_ENV=production node server.js",
-    "serve:stop": "forever stop server.js",
-    "serve:stopall": "forever stopall",
+    "serve:dev": "APP_ENV=development forever -w start server.js",
+    "serve:prod": "node server.js",
     "dev": "webpack-dev-server --inline --progress --config build/webpack.dev.conf.js",
-    "start": "npm run dev",
     "build": "node build/build.js"
   },
   "dependencies": {
@@ -18,11 +15,13 @@
     "body-parser": "^1.18.2",
     "codemirror": "^5.34.0",
     "cors": "^2.8.4",
+    "dotenv": "^5.0.0",
     "express": "^4.16.2",
     "fs-extra": "^5.0.0",
     "glob-promise": "^3.3.0",
     "lodash.debounce": "^4.0.8",
     "lodash.throttle": "^4.1.1",
+    "lodash.uniqueid": "^4.0.1",
     "node-dir": "^0.1.17",
     "vue": "^2.5.2",
     "vue-router": "^3.0.1"

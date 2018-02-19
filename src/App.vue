@@ -1,6 +1,6 @@
 <template>
   <div id="app" class="wrapper">
-    <Flash />
+    <FlashContainer />
     <div class="container">
       <h1 class="app-title">Apache2 VHosts manager</h1>
       <router-view/>
@@ -9,13 +9,13 @@
 </template>
 
 <script>
-  import Flash from './components/Flash.vue'
+  import FlashContainer from './components/FlashComponent/FlashContainer.vue'
   
   export default {
     
     name: 'App',
 
-    components: { Flash }
+    components: { FlashContainer }
 
   }
 </script>

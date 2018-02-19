@@ -8,7 +8,7 @@ export default class VHMaganer {
     }
 
     static pathFor (path = '') {
-        return `http://localhost:${config.app.port}/${path}`
+        return `${config.api.protocol}://${config.api.host}:${config.api.port}/${path}`
     }
 
     static async all () {

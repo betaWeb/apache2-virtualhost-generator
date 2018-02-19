@@ -8,22 +8,14 @@ const { userInfo } = require('os')
 const { exec } = require('child_process')
 const { error } = require('./Utils')
 
-// const filesRegexp = '([0-9]{3,}-)(.*)(.conf)'
-const DEFAULT_SETTINGS = {
-    extension: '.conf',
-    availablesPath: 'sites-available/',
-    enabledPath: 'sites-enabled/'
-}
-
 class VirtualHostsHandler {
 
-    constructor (basepath = "/etc/apache2/", settings = {}) {
+    constructor (settings = {}) {
         this._availables = null
         this._enabled = null
         this._files = {}
-        this.basepath = basepath
         this.settings = {
-            ...DEFAULT_SETTINGS,
+            ...global.config.params,
             ...settings
         }
         this._commands = {
@@ -43,8 +35,8 @@ class VirtualHostsHandler {
 
     async _init () {
         this.paths = {
-            available: path.join(this.basepath, this.settings.availablesPath),
-            enabled: path.join(this.basepath, this.settings.enabledPath)
+            available: path.join(this.settings.basepath, this.settings.availablesPath),
+            enabled: path.join(this.settings.basepath, this.settings.enabledPath)
         }
         await this.updateList()
         this._enabled = (await this.enabledList()).map(item => path.basename(item))
@@ -314,7 +306,7 @@ class VirtualHostsHandler {
             : this._toId(datum.filename)
 
         if (this._isEnabled(datum.filename))
-            datum.enabled = path.join(this.basepath, this.settings.enabledPath, datum.filename)
+            datum.enabled = path.join(this.settings.basepath, this.settings.enabledPath, datum.filename)
 
         return datum
     }
