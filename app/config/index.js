@@ -1,7 +1,11 @@
 module.exports = {
 
-    app: {
+    api: {
         port: 8905
+    },
+
+    app: {
+        port: 3000
     }
 
 }

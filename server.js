@@ -5,19 +5,20 @@ const { readFileSync } = require('fs')
 const config = require('./app/config')
 const VirtualHostsHandler = require('./app/src/VirtualHostsHandler')
 const { success, error } = require('./app/src/Utils')
-const app = express()
+const api = express()
 const vh = new VirtualHostsHandler
+const env = process.env.NODE_ENV || 'development'
 
-app.use(cors())
-app.use(bodyParser.json())
-app.use(bodyParser.urlencoded({ extended: true }))
-app.use((req, res, next) => {
+api.use(cors())
+api.use(bodyParser.json())
+api.use(bodyParser.urlencoded({ extended: true }))
+api.use((req, res, next) => {
     if (!res.hasOwnProperty('hasError'))
         res.finish = json => res.status(json.status).json(json)
     next()
 })
 
-app.post('/api/vh/all', async (req, res) => {
+api.post('/api/vh/all', async (req, res) => {
     let json = {}
     try {
         const response = await vh.all()
@@ -27,7 +28,7 @@ app.post('/api/vh/all', async (req, res) => {
     }
     return res.finish(json)
 })
-app.get('/api/vh/example', (req, res) => {
+api.get('/api/vh/example', (req, res) => {
     try {
         const content = readFileSync('app/resources/conf.example', 'utf-8')
         json = success({ content })
@@ -36,7 +37,7 @@ app.get('/api/vh/example', (req, res) => {
     }
     return res.finish(json)
 })
-app.post('/api/vh/:id/show', async (req, res) => {
+api.post('/api/vh/:id/show', async (req, res) => {
     let json = {}
     try {
         const response = await vh.find(req.params.id)
@@ -46,7 +47,7 @@ app.post('/api/vh/:id/show', async (req, res) => {
     }
     return res.finish(json)
 })
-app.post('/api/vh/configtest', async (req, res) => {
+api.post('/api/vh/configtest', async (req, res) => {
     let json = {}
     try {
         const response = await vh.configtest()
@@ -56,7 +57,7 @@ app.post('/api/vh/configtest', async (req, res) => {
     }
     return res.finish(json)
 })
-app.get('/api/vh/:id/download', async (req, res) => {
+api.get('/api/vh/:id/download', async (req, res) => {
     const { filePath, filename } = await vh.find(req.params.id)
     res.set({
         'Content-type': 'text/plain',
@@ -64,7 +65,7 @@ app.get('/api/vh/:id/download', async (req, res) => {
     })
     res.download(filePath, filename)
 })
-app.post('/api/vh/store', async (req, res) => {
+api.post('/api/vh/store', async (req, res) => {
     let json = {}
     try {
         const response = await vh.store(req.body)
@@ -74,7 +75,7 @@ app.post('/api/vh/store', async (req, res) => {
     }
     return res.finish(json)
 })
-app.put('/api/vh/:id/update', async (req, res) => {
+api.put('/api/vh/:id/update', async (req, res) => {
     let json = {}
     try {
         const response = await vh.update(req.params.id, req.body)
@@ -84,7 +85,7 @@ app.put('/api/vh/:id/update', async (req, res) => {
     }
     return res.finish(json)
 })
-app.put('/api/vh/:id/duplicate', async (req, res) => {
+api.put('/api/vh/:id/duplicate', async (req, res) => {
     let json = {}
     try {
         const response = await vh.duplicate(req.params.id)
@@ -94,7 +95,7 @@ app.put('/api/vh/:id/duplicate', async (req, res) => {
     }
     return res.finish(json)
 })
-app.delete('/api/vh/:id/destroy', async (req, res) => {
+api.delete('/api/vh/:id/destroy', async (req, res) => {
     let json = {}
     try {
         const response = await vh.destroy(req.params.id)
@@ -104,7 +105,7 @@ app.delete('/api/vh/:id/destroy', async (req, res) => {
     }
     return res.finish(json)
 })
-app.put('/api/vh/:id/enable', async (req, res) => {
+api.put('/api/vh/:id/enable', async (req, res) => {
     let json = {}
     try {
         const response = await vh.enableConfig(req.params.id)
@@ -114,7 +115,7 @@ app.put('/api/vh/:id/enable', async (req, res) => {
     }
     return res.finish(json)
 })
-app.put('/api/vh/:id/disable', async (req, res) => {
+api.put('/api/vh/:id/disable', async (req, res) => {
     let json = {}
     try {
         const response = await vh.disableConfig(req.params.id)
@@ -125,4 +126,11 @@ app.put('/api/vh/:id/disable', async (req, res) => {
     return res.finish(json)
 })
 
-app.listen(config.app.port, () => console.log(`App started on http://localhost:${config.app.port}`))
+api.listen(config.api.port, () => console.log(`API started on http://localhost:${config.api.port}`))
+
+if (env === 'production') {
+    const app = express()
+    app.use(express.static(__dirname + '/dist/'));
+    app.get('/', (req, res) => res.sendFile(__dirname + '/dist/index.html'))
+    app.listen(config.app.port, () => console.log(`App started on http://localhost:${config.app.port}`))
+}

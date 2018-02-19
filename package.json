@@ -6,7 +6,7 @@
   "private": true,
   "scripts": {
     "serve:dev": "forever -w start server.js",
-    "serve:prod": "forever start server.js",
+    "serve:prod": "NODE_ENV=production node server.js",
     "serve:stop": "forever stop server.js",
     "serve:stopall": "forever stopall",
     "dev": "webpack-dev-server --inline --progress --config build/webpack.dev.conf.js",
