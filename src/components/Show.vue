@@ -11,20 +11,20 @@
             <p><strong>Chemin complet</strong>&nbsp;:&nbsp;&nbsp;<span>{{ item.filePath }}</span></p>
             <p v-if="item.enabled"><strong>Activé</strong>&nbsp;:&nbsp;&nbsp;Oui</p>
             <p><strong>Détails&nbsp;:</strong></p>
-            <List :list="item.parsed" />
+            <Details :list="item.parsed" :content="item.content" />
         </div>
       </div>
   </div>
 </template>
 
-<script lang="babel">
+<script>
 import Loader from './Loader.vue'
-import List from './List.vue'
+import Details from './Details.vue'
 import Icon from './Icon.vue'
 import Actions from './Actions.vue'
 import VHMaganer from '../app/VHMaganer'
 export default {
-    components: { Loader, List, Icon, Actions },
+    components: { Loader, Details, Icon, Actions },
 
     data () {
         return {
