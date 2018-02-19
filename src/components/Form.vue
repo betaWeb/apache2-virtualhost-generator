@@ -38,6 +38,10 @@
                 <label for="enabled">Activer la configuration</label>
             </div>
             <div v-if="editing" class="checkable-group">
+                <input type="checkbox" name="override" id="override" v-model="item.override">
+                <label for="override">Ecraser la configuration existante</label>
+            </div>
+            <div v-if="editing" class="checkable-group">
                 <input type="checkbox" name="comments" id="comments" v-model="item.comments">
                 <label for="comments">Conserver les commentaires</label>
             </div>
@@ -73,7 +77,8 @@ export default {
                 filename: null,
                 parsed: null,
                 enabled: false,
-                comments: false
+                comments: false,
+                override: true
             },
             editor: null,
             editing: false,
@@ -85,26 +90,52 @@ export default {
     methods: {
 
         async fetchItem () {
-            const response = await VHMaganer.find(this.$route.params.id)
-            this.item = {...this.item, ...response}
-            this.initEditor(this.parsed)
+            try {
+                const response = this.editing 
+                    ? await VHMaganer.find(this.$route.params.id)
+                    : await VHMaganer.getExample()
+
+                this.item = {...this.item, ...response}
+                this.initEditor(this.parsed)
+            } catch (e) {
+                this.$root.$emit('flash', { message: e })
+            }
         },
 
         async handleSubmit (e) {
             e.preventDefault()
             this.loader = true
+            this.configtest = null
+            let { id, filename, enabled, override } = this.item
 
             const data = {
-                id: this.item.id,
-                filename: this.item.filename,
-                enabled: this.item.enabled,
+                id,
+                filename,
+                enabled,
+                override,
                 content: this.editor.getValue()
             }
-            const { response } = this.editing 
-                ? await VHMaganer.update(this.item.id, data)
-                : await VHMaganer.store(data)
 
-            this.getConfigtest()
+            try {
+                const response = this.editing 
+                    ? await VHMaganer.update(id, data)
+                    : await VHMaganer.store(data)
+
+                if (override === false || !this.editing) {
+                    this.$router.push({ name: 'vh.edit', params: { id: response.id } })
+                    window.location.reload()
+                }
+
+                let message = 'VHost %s avec succès'
+                let state = this.editing ? 'mis à jour' : 'créé'
+                if (enabled) state = `${state} et activé`
+                this.$root.$emit('flash', { message: message.replace('%s', state), type: 'success' })
+            } catch (e) {
+                this.configtest = e.message ? e.message : e
+                this.lineError = VHMaganer.getLineError(this.configtest)
+                if (this.lineError !== null) this.editor.addLineClass(this.lineError, 'wrap', 'error__bg')
+            }
+            this.loader = false
         },
 
         setContent (content, undo = false) {
@@ -124,17 +155,20 @@ export default {
 
         async getConfigtest () {
             this.loader = true
-            this.configtest = (await VHMaganer.configtest()).response || false
-            if (this.hasConfigError) {
-                this.lineError = VHMaganer.getLineError(this.configtest)
-                if (this.lineError !== null) this.editor.addLineClass(this.lineError, 'wrap', 'error__bg')
+            try {
+                this.configtest = await VHMaganer.configtest()
+            } catch (e) {
+                if (this.hasConfigError) {
+                    this.lineError = VHMaganer.getLineError(e)
+                    if (this.lineError !== null) this.editor.addLineClass(this.lineError, 'wrap', 'error__bg')
+                }
             }
             this.loader = false
         },
 
         initEditor (value = '') {
             const textarea = this.$refs.content
-            if (!textarea) return
+            if (!textarea || !textarea.parentNode) return
             this.editor = CodeMirror(el => textarea.parentNode.replaceChild(el, textarea), {
                 value,
                 mode: "xml",
@@ -174,8 +208,7 @@ export default {
 
     mounted () {
         this.editing = Boolean(this.$route.params.id !== undefined)
-        if (this.editing) this.fetchItem()
-        else this.initEditor()
+        this.fetchItem()
         this.loader = false
 
         this.$watch('item', throttle(({ comments }) => this.editor.setValue(this.parsed), 300), { deep: true })

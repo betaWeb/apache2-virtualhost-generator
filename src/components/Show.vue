@@ -9,7 +9,7 @@
         <div class="info">
             <p><strong>Nom du fichier</strong>&nbsp;:&nbsp;&nbsp;<span>{{ item.filename }}</span></p>
             <p><strong>Chemin complet</strong>&nbsp;:&nbsp;&nbsp;<span>{{ item.filePath }}</span></p>
-            <p v-if="item.enabled"><strong>Activé</strong>&nbsp;:&nbsp;&nbsp;<span>Oui <small>(<em>{{ item.enabled }}</em>)</small></span></p>
+            <p v-if="item.enabled"><strong>Activé</strong>&nbsp;:&nbsp;&nbsp;Oui</p>
             <p><strong>Détails&nbsp;:</strong></p>
             <List :list="item.parsed" />
         </div>
@@ -42,7 +42,11 @@ export default {
 
     methods: {
         fetchItem: async function () {
-            this.item = await VHMaganer.find(this.$route.params.id)
+            try {
+                this.item = await VHMaganer.find(this.$route.params.id)
+            } catch (e) {
+                this.$root.$emit('flash', { message: e })
+            }
             this.loader = false
         }
     },

@@ -14,54 +14,77 @@ export default class VHMaganer {
     static async all () {
         try {
             const response = await VHMaganer.fetchAPI('api/vh/all', { method: 'POST' })
-            return response.json()
+            const json = await response.json()
+            if (json.err !== null) throw json.err
+            return json.data
         } catch (e) {
-            throw new Error(`[Err] VHMaganer.all - ${e}`)
+            throw e
         }
     }
 
     static async find (id) {
         try {
             const response = await VHMaganer.fetchAPI(`api/vh/${id}/show`, { method: 'POST' })
-            return response.json()
+            const json = await response.json()
+            if (json.err !== null) throw json.err
+            return json.data
         } catch (e) {
-            throw new Error(`[Err] VHMaganer.find - item ${id} - ${e}`)
+            throw e
+        }
+    }
+
+    static async getExample () {
+        try {
+            const response = await VHMaganer.fetchAPI(`api/vh/example`)
+            const json = await response.json()
+            if (json.err !== null) throw json.err
+            return json.data
+        } catch (e) {
+            throw e
         }
     }
 
     static async store (data) {
         try {
             const response = await VHMaganer.fetchAPI('api/vh/store', { method: 'POST', body: JSON.stringify(data) })
-            return response.json()
+            const json = await response.json()
+            if (json.err !== null) throw json.err
+            return json.data
         } catch (e) {
-            throw new Error(`[Err] VHMaganer.store - ${e}`)
+            throw e
         }        
     }
 
     static async update (id, data) {
         try {
             const response = await VHMaganer.fetchAPI(`api/vh/${id}/update`, { method: 'PUT', body: JSON.stringify(data) })
-            return response.json()
+            const json = await response.json()
+            if (json.err !== null) throw json.err
+            return json.data
         } catch (e) {
-            throw new Error(`[Err] VHMaganer.update - item ${id} - ${e}`)
+            throw e
         }
     }
 
     static async enableConfig (id) {
         try {
             const response = await VHMaganer.fetchAPI(`api/vh/${id}/enable`, { method: 'PUT' })
-            return response.json()
+            const json = await response.json()
+            if (json.err !== null) throw json.err
+            return json.data
         } catch (e) {
-            throw new Error(`[Err] VHMaganer.enableConfig - item ${id} - ${e}`)
+            throw e
         }
     }
 
     static async disableConfig (id) {
         try {
             const response = await VHMaganer.fetchAPI(`api/vh/${id}/disable`, { method: 'PUT' })
-            return response.json()
+            const json = await response.json()
+            if (json.err !== null) throw json.err
+            return json.data
         } catch (e) {
-            throw new Error(`[Err] VHMaganer.disableConfig - item ${id} - ${e}`)
+            throw e
         }
     }
 
@@ -70,16 +93,42 @@ export default class VHMaganer {
         try {
             window.open(VHMaganer.pathFor(`api/vh/${id}/download`))
         } catch (e) {
-            throw new Error(`[Err] VHMaganer.download - item ${id} - ${e}`)
+            throw e
+        }
+    }
+
+    static async duplicate (id) {
+        if (!id) return
+        try {
+            const response = await VHMaganer.fetchAPI(`api/vh/${id}/duplicate`, { method: 'PUT' })
+            const json = await response.json()
+            if (json.err !== null) throw json.err
+            return json.data
+        } catch (e) {
+            throw e
+        }
+    }
+
+    static async destroy (id) {
+        if (!id) return
+        try {
+            const response = await VHMaganer.fetchAPI(`api/vh/${id}/destroy`, { method: 'DELETE' })
+            const json = await response.json()
+            if (json.err !== null) throw json.err
+            return json.data
+        } catch (e) {
+            throw e
         }
     }
 
     static async configtest () {
         try {
             const response = await VHMaganer.fetchAPI(`api/vh/configtest`, { method: 'POST' })
-            return response.json()
+            const json = await response.json()
+            if (json.err !== null) throw json.err
+            return json.data
         } catch (e) {
-            throw new Error(`[Err] VHMaganer.configtest - ${e}`)
+            throw e
         }
     }
 

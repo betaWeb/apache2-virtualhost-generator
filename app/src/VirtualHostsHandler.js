@@ -3,22 +3,16 @@ const path = require('path')
 const fs = require('fs')
 const crypto = require('crypto')
 const apacheconf = require('apacheconf')
+const { copySync } = require('fs-extra')
 const { userInfo } = require('os')
-const { exec } = require('child_process');
+const { exec } = require('child_process')
+const { error } = require('./Utils')
 
 // const filesRegexp = '([0-9]{3,}-)(.*)(.conf)'
 const DEFAULT_SETTINGS = {
     extension: '.conf',
     availablesPath: 'sites-available/',
-    enabledPath: 'sites-enabled/',
-    commands: {
-        chmod: 'sudo chmod %m %s;',
-        chown: 'sudo chown %u:%u %s;',
-        apacheReload: 'sudo service apache2 reload;',
-        configtest: 'apachectl configtest;',
-        enableSite: 'cd %d; sudo a2ensite %s;',
-        disableSite: 'cd %d; sudo a2dissite %s;'
-    }
+    enabledPath: 'sites-enabled/'
 }
 
 class VirtualHostsHandler {
@@ -32,26 +26,42 @@ class VirtualHostsHandler {
             ...DEFAULT_SETTINGS,
             ...settings
         }
-        this.init()
+        this._commands = {
+            chmod: 'sudo chmod %m %s;',
+            chown: 'sudo chown %u:%u %s;',
+            apacheReload: 'sudo service apache2 reload;',
+            configtest: 'apachectl configtest;',
+            enableSite: 'cd %d; sudo a2ensite %s;',
+            disableSite: 'cd %d; sudo a2dissite %s;',
+            create: 'sudo touch %i;',
+            copy: 'sudo cp %i %o;',
+            move: 'sudo mv %i %o;',
+            remove: 'sudo rm %i;',
+        }
+        this._init()
     }
 
-    async init () {
+    async _init () {
         this.paths = {
             available: path.join(this.basepath, this.settings.availablesPath),
             enabled: path.join(this.basepath, this.settings.enabledPath)
         }
-        this._availables = await this.availablesList()
+        await this.updateList()
         this._enabled = (await this.enabledList()).map(item => path.basename(item))
+    }
+
+    async updateList () {
+        this._availables = await this.availablesList()
     }
 
     async all () {
         try {
             let data = []
+            await this.updateList()
             this._availables.forEach(item => data.push(this._datum(item)))
             return data
         } catch (e) {
-            this._logError('all', e)
-            throw new Error(e)
+            throw e
         }
     }
 
@@ -60,42 +70,83 @@ class VirtualHostsHandler {
             if (!this.fileExists(id)) throw new Error('ERR_NO_FILE')
             return await this.getFileInfo(id)
         } catch (e) {
-            this._logError('find', e)
-            throw new Error(e)
+            throw e
         }
     }
 
     async store ({ filename, content, enabled }) {
         try {
-            filename = this._setExtension(data.filename)
+            filename = this._setExtension(filename)
             const id = this._toId(filename)
             const filePath = path.join(this.paths.available, filename)
-            await this._writeFile(filePath, content)
+            try {
+                fs.lstatSync(filePath)
+            } catch (e) {
+                if (e.code !== 'ENOENT') throw 'ERR_ALREADY_EXISTS'
+            }
+            await this._writeFile(filePath, content, null, false)
+            await this._chown(filePath)
+            await this._chmod(filePath)
             this._availables.push(filePath)
             if (enabled === true) await this.enableConfig(id)
-            return true
+            await this.updateList()
+            return await this.getFileInfo(id)
         } catch (e) {
-            this._logError('store', e)
-            throw new Error(e)
+            throw e
         }
     }
 
     async update (id, data) {
         try {
             let oldFilePath = null
-            const newFilename = this._setExtension(data.filename)
-            const { filePath, filename } = await this.getFileInfo(id)
-            if (newFilename !== filename) {
-                oldFilePath = filePath
+            let newFilename = this._setExtension(data.filename)
+            let { filePath, filename } = await this.getFileInfo(id)
+            let newFile = false
+            if (data.override === true) {
+                if (newFilename !== filename) {
+                    oldFilePath = filePath
+                    filePath = path.join(path.dirname(filePath), newFilename)
+                }
+            } else {
+                newFile = true
+                if (newFilename === filename) newFilename = this._overrideFilename(newFilename)
                 filePath = path.join(path.dirname(filePath), newFilename)
             }
-            await this._writeFile(filePath, data.content, oldFilePath)
-            if (data.enabled === true) await this.enableConfig(id)
+            await this._writeFile(filePath, data.content, oldFilePath, data.override)
+            await this.enableConfig(id)
+            let test = await this.configtest()
+            if (data.enabled !== true && this._isEnabled(filename)) await this.disableConfig(id)
+            if (test !== true) throw test
+            if (newFile) id = this._toId(newFilename)
+            await this.updateList()
             await this._updateFileInfo(id)
-            return true
+            return await this.getFileInfo(id)
         } catch (e) {
-            this._logError('update', e)
-            throw new Error(e)
+            throw e
+        }
+    }
+
+    async duplicate (id) {
+        try {
+            const { filePath, filename } = await this.getFileInfo(id)
+            const outputFilename = this._overrideFilename(filename)
+            const outputFilePath = path.join(path.dirname(filePath), outputFilename)
+            const outputId = this._toId(outputFilename)
+            await this._execCommand('copy', { 'i': filePath, 'o': outputFilePath })
+            await this.updateList()
+            return await this.getFileInfo(outputId)
+        } catch (e) {
+            throw e
+        }
+    }
+
+    async destroy (id) {
+        try {
+            let { filePath, filename } = await this.getFileInfo(id)
+            if (this._isEnabled(filename)) await this.disableConfig(id)
+            return await this._execCommand('remove', { 'i': filePath })
+        } catch (e) {
+            throw e
         }
     }
 
@@ -103,17 +154,13 @@ class VirtualHostsHandler {
         if (!this.fileExists(id)) throw 'ERR_NO_FILE'
         const { filePath, filename } = await this.getFileInfo(id)
         if (this._isEnabled(filename)) return true
-        const cmd = this.settings.commands.enableSite
-            .replace('%d', path.dirname(filePath))
-            .replace('%s', filename)
         
         try {
-            const result = await this._execCommand(cmd)
+            await this._execCommand('enableSite', { 'd': path.dirname(filePath), 's': filename })
             if (!this._isEnabled(filename)) this._enabled.push(filename)
             return await this._reloadApache()
         } catch (e) {
-            this._logError('enableConfig', e)
-            throw new Error(e)
+            throw e
         }
     }
 
@@ -121,17 +168,13 @@ class VirtualHostsHandler {
         if (!this.fileExists(id)) throw 'ERR_NO_FILE'
         const { filePath, filename } = await this.getFileInfo(id)
         if (!this._isEnabled(filename)) return true
-        const cmd = this.settings.commands.disableSite
-            .replace('%d', path.dirname(filePath))
-            .replace('%s', filename)
         
         try {
-            const result = await this._execCommand(cmd)
+            await this._execCommand('disableSite', { 'd': path.dirname(filePath), 's': filename })
             this._enabled = this._enabled.filter(item => item !== filename)
             return await this._reloadApache()
         } catch (e) {
-            this._logError('disableConfig', e)
-            throw new Error(e)
+            throw e
         }
     }
 
@@ -144,7 +187,7 @@ class VirtualHostsHandler {
     }
 
     async configtest () {
-        const { stderr } = await this._execCommand(this.settings.commands.configtest)
+        const { stderr } = await this._execCommand('configtest')
         if (/syntax ok/ig.test(stderr)) return true
         return stderr.message
     }
@@ -158,9 +201,7 @@ class VirtualHostsHandler {
     }
 
     async getFileInfo (id) {
-        if (!this.hasFileInfo(id)) {
-            await this._updateFileInfo(id)
-        }
+        if (!this.hasFileInfo(id)) await this._updateFileInfo(id)
         return this._files[id]
     }
 
@@ -175,19 +216,27 @@ class VirtualHostsHandler {
         this._files[id] = content
     }
 
-    async _writeFile (filePath, content, oldFilePath = null) {
+    async _writeFile (filePath, content, oldFilePath = null, override = true) {
         try {
-            const { chmod, chown } = this.settings.commands
             if (oldFilePath !== null) {
-                await this._chown(oldFilePath)
-                await this._chmod(oldFilePath)
-                fs.unlinkSync(oldFilePath)
+                this._unlinkFile(oldFilePath)
             }
+            if (!override) await this._execCommand('create', { 'i': filePath })
             await this._chown(filePath)
             await this._chmod(filePath)
-            fs.writeFileSync(filePath, content, { encoding:'utf8', flag:'w' })
+            fs.writeFileSync(filePath, content, { encoding:'utf8', flag:'w', mode: 0o777 })
         } catch (e) {
-            throw new Error(`[ERR] VirtualHostsHandler._writeFile - ${e}`)
+            throw new Error(e)
+        }
+    }
+
+    async _unlinkFile (filePath) {
+        try {
+            await this._chown(filePath)
+            await this._chmod(filePath)
+            fs.unlinkSync(filePath)
+        } catch (e) {
+            throw new Error(e)
         }
     }
 
@@ -204,7 +253,16 @@ class VirtualHostsHandler {
         })
     }
 
-    async _execCommand (command) {
+    async _execCommand (command, args = null) {
+        if (Object.keys(this._commands).includes(command))
+            command = this._commands[command]
+
+        if (args && args.constructor === Object) {
+            command = command.replace(
+                new RegExp('\%' + Object.keys(args).join('|\%'), 'g'),
+                m => args[m.substr(1)]
+            )
+        }
         return new Promise((resolve, reject) => {
             try {
                 exec(command, (err, stdout, stderr) => {
@@ -274,29 +332,32 @@ class VirtualHostsHandler {
         return filename
     }
 
-    _logError(methodName, err) {
-        console.error(`\n[ERR] VirtualHostsHandler.${methodName} - ${err.stack}\n`)
+    _overrideFilename (filename) {
+        const matches = filename.match(/^([0-9]{1,})(\_\_[0-9]+)?\-(\S+)(.conf)$/)
+        if (!matches || !matches.length) return filename
+        const prefix = matches[1]
+        let name = matches[3]
+        let ext = matches[4]
+        return `${prefix}__${+new Date}-${name}${ext}`
     }
 
-    async _chmod (filePath, mode = 777) {
-        const cmd = this.settings.commands.chmod
-            .replace('%m', mode.toString())
-            .replace('%s', filePath)
-        await this._execCommand(cmd)
+    async _chmod (filePath, mode = '0755') {
+        await this._execCommand('chmod', { 'm': mode.toString(), 's': filePath })
     }
 
     async _chown (filePath) {
-        const cmd = this.settings.commands.chown
-            .replace(/%u/g, userInfo.username)
+        const uname = userInfo.username || '$USER'
+        const cmd = this._commands.chown
+            .replace(/%u/g, uname)
             .replace('%s', filePath)
         await this._execCommand(cmd)
     }
 
     async _reloadApache () {
         try {
-            return await this._execCommand(this.settings.commands.apacheReload)
+            return await this._execCommand('apacheReload')
         } catch (e) {
-            this._logError('_reloadApache', e)
+            error(e, 'VirtualHostsHandler._reloadApache')
             throw new Error(e)
         }
     }

@@ -6,11 +6,15 @@
         </div>
         <ul class="table">
             <li class="table__head">
-                <div class="items__title">Fichiers ({{ list.length }})</div>
+                <div class="items__title">Fichiers ({{ filteredList.length }})</div>
                 <div class="enabled__title">Activé</div>
                 <div class="actions__title">Actions</div>
             </li>
-            <li v-for="(item, key) in list" :key="key" class="table__item">
+            <li class="table_search">
+                <input type="text" placeholder="Rechercher..." v-model="query" @keyup.prevent="doSearch">
+            </li>
+            <li class="table_empty" v-if="noSearchResults">Aucun résultat pour &laquo; {{ this.query }} &raquo;</li>
+            <li v-for="(item, key) in filteredList" :key="key" class="table__item">
                 <router-link class="table__link" :to="{ name: 'vh.show', params: { id: item.id }}">{{ item.filename }}</router-link>
                 <div class="table__enabled" :title="item.enabled ? item.enabled : ''">
                     <Icon v-if="item.enabled" id="icon__check" :class="enabledCss(item.enabled)" />
@@ -27,6 +31,7 @@ import VHMaganer from '../app/VHMaganer'
 import Icon from './Icon.vue'
 import Loader from './Loader.vue'
 import Actions from './Actions.vue'
+import debounce from 'lodash.debounce'
 export default {
 
     components: { Icon, Loader, Actions },
@@ -34,22 +39,22 @@ export default {
     data () {
         return {
             loader: true,
-            list: []
+            list: [],
+            filteredList: [],
+            error: null,
+            query: ''
         }
     },
 
     methods: {
         async fetchList () {
-            this.list = await VHMaganer.all()
+            try {
+                this.list = await VHMaganer.all()
+                this.filteredList = this.list
+            } catch (e) {
+                this.$root.$emit('flash', { message: e })
+            }
             this.loader = false
-        },
-
-        enableItem (id) {
-            this.toggleItemState(id, true)
-        },
-
-        disableItem (id) {
-            this.toggleItemState(id, false)
         },
 
         enabledCss: function (enabled = false) {
@@ -58,16 +63,25 @@ export default {
             return cls
         },
 
-        toggleItemState (id, state) {
-            const item = this.list.find(i => i.id === id)
-            if (item) item.enabled = state
+        doSearch: debounce(function (e) {
+            if (!this.query.length) {
+                this.filteredList !== this.list && (this.filteredList = this.list)
+                return
+            }
+            this.filteredList = this.list.filter(item => item.filename.indexOf(this.query) >= 0)
+        }, 300)
+    },
+
+    computed: {
+        noSearchResults () {
+            return this.query.length && !this.filteredList.length
         }
     },
 
     async mounted () {
         await this.fetchList()
-        this.$root.$on('vh.enabled', ({ id }) => this.enableItem(id))
-        this.$root.$on('vh.disabled', ({ id }) => this.disableItem(id))
+        this.$root.$on('vh.duplicated', ({ info }) => this.filteredList.push(info))
+        this.$root.$on('vh.destroyed', ({ id }) => this.filteredList = this.filteredList.filter(item => item.id != id))
     }
 }
 </script>
@@ -83,7 +97,7 @@ export default {
         margin: 0;
         padding: 0;
 
-        .table__head, .table__item {
+        .table__head, .table__item, .table_search, .table_empty {
             height: 36px;
             line-height: 36px;
             font-size: .95em;
@@ -110,6 +124,25 @@ export default {
             }
         }
 
+        .table_empty {
+            font-style: italic;
+            text-align: center;
+            color: $text-color;
+            border-top: 1px solid rgba($text-color, .334);
+            font-size: .85em;
+        }
+
+        .table_search {
+            input {
+                margin: 0;
+                border: none;
+                background-color: transparent;
+                color: rgba($text-color, .8);
+                height: inherit;
+                line-height: inherit;
+            }
+        }
+
         .table__item {
             padding: 0 1em;
 
@@ -130,19 +163,25 @@ export default {
                 text-align: center;
                 width: 16.667%;
 
-                .enabled__icon {
-                    stroke: $error-color;
+                .icon {
+                    width: 22px;
+                    height: 22px;
 
-                    &.is-enabled {
-                        stroke: $success-color;
+                    &.enabled__icon {
+                        stroke: $error-color;
+
+                        &.is-enabled {
+                            stroke: $success-color;
+                        }
                     }
                 }
             }
 
             .table__link {
                 width: 50%;
-                font-size: .95em;
-                color: rgba($dark-color, .8);
+                font-size: .9em;
+                font-style: italic;
+                color: rgba($dark-color, .7);
             }
             .table__actions {
                 width: 33.3334%;

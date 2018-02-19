@@ -1,58 +1,128 @@
 const express = require('express')
 const cors = require('cors')
 const bodyParser = require('body-parser')
+const { readFileSync } = require('fs')
 const config = require('./app/config')
 const VirtualHostsHandler = require('./app/src/VirtualHostsHandler')
+const { success, error } = require('./app/src/Utils')
 const app = express()
 const vh = new VirtualHostsHandler
 
 app.use(cors())
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }))
+app.use((req, res, next) => {
+    if (!res.hasOwnProperty('hasError'))
+        res.finish = json => res.status(json.status).json(json)
+    next()
+})
 
 app.post('/api/vh/all', async (req, res) => {
-    const list = await vh.all()
-    res.json(list)
+    let json = {}
+    try {
+        const response = await vh.all()
+        json = success(response)
+    } catch (e) {
+        json = error(e)
+    }
+    return res.finish(json)
+})
+app.get('/api/vh/example', (req, res) => {
+    try {
+        const content = readFileSync('app/resources/conf.example', 'utf-8')
+        json = success({ content })
+    } catch (e) {
+        json = error(e)        
+    }
+    return res.finish(json)
 })
 app.post('/api/vh/:id/show', async (req, res) => {
-    const item = await vh.find(req.params.id)
-    return res.json(item)
+    let json = {}
+    try {
+        const response = await vh.find(req.params.id)
+        json = success(response)
+    } catch (e) {
+        json = error(e)
+    }
+    return res.finish(json)
 })
 app.post('/api/vh/configtest', async (req, res) => {
-    const response = await vh.configtest()
-    return res.json({ response })
+    let json = {}
+    try {
+        const response = await vh.configtest()
+        json = success(response)
+    } catch (e) {
+        json = error(e)
+    }
+    return res.finish(json)
 })
 app.get('/api/vh/:id/download', async (req, res) => {
-    const { path, filename } = await vh.find(req.params.id)
+    const { filePath, filename } = await vh.find(req.params.id)
     res.set({
         'Content-type': 'text/plain',
         'Content-disposition': `attachment; filename=${filename}`
     })
-    res.download(path, filename)
+    res.download(filePath, filename)
 })
 app.post('/api/vh/store', async (req, res) => {
-    const response = await vh.store(req.body)
-    return res.json({ response })    
+    let json = {}
+    try {
+        const response = await vh.store(req.body)
+        json = success(response)
+    } catch (e) {
+        json = error(e)
+    }
+    return res.finish(json)
 })
 app.put('/api/vh/:id/update', async (req, res) => {
-    const response = await vh.update(req.params.id, req.body)
-    return res.json({ response }) 
+    let json = {}
+    try {
+        const response = await vh.update(req.params.id, req.body)
+        json = success(response)
+    } catch (e) {
+        json = error(e)
+    }
+    return res.finish(json)
+})
+app.put('/api/vh/:id/duplicate', async (req, res) => {
+    let json = {}
+    try {
+        const response = await vh.duplicate(req.params.id)
+        json = success(response)
+    } catch (e) {
+        json = error(e)
+    }
+    return res.finish(json)
+})
+app.delete('/api/vh/:id/destroy', async (req, res) => {
+    let json = {}
+    try {
+        const response = await vh.destroy(req.params.id)
+        json = success(response)
+    } catch (e) {
+        json = error(e)
+    }
+    return res.finish(json)
 })
 app.put('/api/vh/:id/enable', async (req, res) => {
+    let json = {}
     try {
         const response = await vh.enableConfig(req.params.id)
-        return res.json({ response })
+        json = success(response)
     } catch (e) {
-        return res.status(500).json({ error: e.message })
+        json = error(e)
     }
+    return res.finish(json)
 })
 app.put('/api/vh/:id/disable', async (req, res) => {
+    let json = {}
     try {
         const response = await vh.disableConfig(req.params.id)
-        return res.json({ response })
+        json = success(response)
     } catch (e) {
-        return res.status(500).json({ error: e.message })
+        json = error(e)
     }
+    return res.finish(json)
 })
 
 app.listen(config.app.port, () => console.log(`App started on http://localhost:${config.app.port}`))

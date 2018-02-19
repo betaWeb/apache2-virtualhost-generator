@@ -1,0 +1,11 @@
+<VirtualHost *:80>
+	serverName mydomain.com
+	ServerAdmin contact@mydomain.com
+	DocumentRoot /var/www/html/mydomain
+	<Directory /var/www/html/mydomain>
+		Options FollowSymLinks
+	    AllowOverride All
+	</Directory>
+	ErrorLog ${APACHE_LOG_DIR}/error.log
+	CustomLog ${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>
