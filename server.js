@@ -131,7 +131,7 @@ api.put('/api/vh/:id/disable', async (req, res) => {
 
 api.listen(config.api.port, () => console.log(`API started on ${config.api.protocol}://${config.api.host}:${config.api.port}`))
 
-if (env === 'production' && process.env.API_ONLY === false) {
+if (env === 'production' && process.env.API_ONLY != true) {
     const app = express()
     app.use(express.static(__dirname + '/dist/'));
     app.get('/', (req, res) => res.sendFile(__dirname + '/dist/index.html'))
