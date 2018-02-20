@@ -16,7 +16,11 @@ Then, check that you have su permissions. If not, add this line on `/etc/sudoers
 ## Run application
 To run application, just run the following command :
 ```SHELL
+# via NPM
 npm run serve:prod
+
+# Via NodeJS
+node server.js
 ```
 
 The server starts by default on port `3000`. To launch app with other port, or define other environment variables, you can edit `.env` file.
