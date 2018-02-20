@@ -22,6 +22,7 @@ npm run serve:prod
 The server starts by default on port `3000`. To launch app with other port, or define other environment variables, you can edit `.env` file.
 ```
 APP_ENV="production"
+API_ONLY=false
 
 API_PROTOCOL="http"
 API_HOST="localhost"
@@ -36,3 +37,6 @@ CONF_EXTENSION=".conf"
 CONF_AVAILABLES="sites-available/"
 CONF_ENABLED="sites-enabled/"
 ```
+
+If you only want to launch the API, you can set `API_ONLY` env variable value at `true`.
+It allows you to access the app via an HTTP server like Apache2, Nginx etc (the entry point is `build/index.html`).

@@ -1,5 +1,3 @@
-// The Vue build version to load with the `import` command
-// (runtime-only or standalone) has been set in webpack.base.conf with an alias.
 import Vue from 'vue'
 import App from './App'
 import router from './router'
@@ -12,9 +10,13 @@ Vue.filter('join', function (value, glue = ', ') {
 })
 
 /* eslint-disable no-new */
-new Vue({
+const app = new Vue({
   el: '#app',
   router,
   components: { App },
   template: '<App/>'
 })
+
+window.listen = (name, cb) => app.$root.$on(name, cb)
+window.dispatch = (name, data = {}) => app.$root.$emit(name, data)
+window.flash = (message, type, timeout) => dispatch('flash', { message, type, timeout })

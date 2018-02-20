@@ -52,7 +52,8 @@ export default {
                 this.list = await VHMaganer.all()
                 this.filteredList = this.list
             } catch (e) {
-                this.$root.$emit('flash', { message: e })
+                // this.$root.$emit('flash', { message: e })
+                flash(e)
             }
             this.loader = false
         },
@@ -80,8 +81,8 @@ export default {
 
     async mounted () {
         await this.fetchList()
-        this.$root.$on('vh.duplicated', ({ info }) => this.filteredList.push(info))
-        this.$root.$on('vh.destroyed', ({ id }) => this.filteredList = this.filteredList.filter(item => item.id != id))
+        listen('vh.duplicated', ({ info }) => this.filteredList.push(info))
+        listen('vh.destroyed', ({ id }) => this.filteredList = this.filteredList.filter(item => item.id != id))
     }
 }
 </script>

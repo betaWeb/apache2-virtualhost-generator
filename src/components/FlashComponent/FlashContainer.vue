@@ -38,8 +38,10 @@ export default {
     },
 
     mounted () {
-        this.$root.$on('flash', this.addItem.bind(this))
-        this.$root.$on('flash.close', ({ id }) => this.removeItem(id))
+        this.$nextTick(() => {
+            listen('flash', this.addItem.bind(this))
+            listen('flash.close', ({ id }) => this.removeItem(id))
+        })
     }
 }
 </script>

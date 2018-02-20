@@ -3,7 +3,7 @@
       <Loader v-show="loader" />
       <div v-show="!loader && item">
         <div class="toolbar toolbar__show">
-            <router-link class="toolbar__link back__link" :to="{ name: 'vh.index'}">Retour</router-link>
+            <router-link class="toolbar__link back__link" :to="{ name: 'vh.index' }">Retour</router-link>
             <Actions :item="item" class="toolbar__actions" />
         </div>
         <div class="info">
@@ -45,7 +45,7 @@ export default {
             try {
                 this.item = await VHMaganer.find(this.$route.params.id)
             } catch (e) {
-                this.$root.$emit('flash', { message: e })
+                flash(e)
             }
             this.loader = false
         }

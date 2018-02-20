@@ -98,7 +98,7 @@ export default {
                 this.item = {...this.item, ...response}
                 this.initEditor(this.parsed)
             } catch (e) {
-                this.$root.$emit('flash', { message: e })
+                flash(e)
             }
         },
 
@@ -129,7 +129,7 @@ export default {
                 let message = 'VHost %s avec succès'
                 let state = this.editing ? 'mis à jour' : 'créé'
                 if (enabled) state = `${state} et activé`
-                this.$root.$emit('flash', { message: message.replace('%s', state), type: 'success' })
+                flash(message.replace('%s', state), 'success')
             } catch (e) {
                 this.configtest = e.message ? e.message : e
                 this.lineError = VHMaganer.getLineError(this.configtest)
@@ -160,7 +160,10 @@ export default {
             } catch (e) {
                 if (this.hasConfigError) {
                     this.lineError = VHMaganer.getLineError(e)
-                    if (this.lineError !== null) this.editor.addLineClass(this.lineError, 'wrap', 'error__bg')
+                    if (this.lineError !== null) {
+                        this.editor.addLineClass(this.lineError, 'wrap', 'error__bg')
+                        this.editor.scrollIntoView(this.lineError)
+                    }
                 }
             }
             this.loader = false
@@ -241,7 +244,7 @@ export default {
                 position: relative;
 
                 &.has__error .CodeMirror {
-                    padding-bottom: 50px;
+                    padding-bottom: 60px;
 
                     .CodeMirror-scroll {
                         overflow: hidden !important;
@@ -273,10 +276,10 @@ export default {
                 width: 100%;
                 font-size: .85em;
                 font-style: italic;
-                height: 50px;
+                max-height: 60px;
                 margin: 0;
-                padding: .25em 1em;
-                background-color: transparent;
+                padding: .5em 1em;
+                background-color: $bg-color;
                 transform: translateY(-20px);
                 z-index: 100;
                 overflow-y: auto;

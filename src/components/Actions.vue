@@ -53,10 +53,10 @@ export default {
             try {
                 const id = this.item.id
                 const info = await VHMaganer.duplicate(id)
-                this.$root.$emit('vh.duplicated', { id, info })
-                this.$root.$emit('flash', { message: "VHost dupliqué avec succès", type: 'success' })
+                dispatch('vh.duplicated', { id, info })
+                flash("VHost dupliqué avec succès", "success")
             } catch (e) {
-                this.$root.$emit('flash', { message: e })
+                flash(e)
             }
         },
 
@@ -65,10 +65,10 @@ export default {
             try {
                 const id = this.item.id
                 await VHMaganer.destroy(id)
-                this.$root.$emit('vh.destroyed', { id })
-                this.$root.$emit('flash', { message: "VHost supprimé avec succès", type: 'success' })
+                dispatch('vh.destroyed', { id })
+                flash("VHost supprimé avec succès", "success")
             } catch (e) {
-                this.$root.$emit('flash', { message: e })
+                flash(e)
             }
         },
 
@@ -82,7 +82,7 @@ export default {
             } catch (e) {
                 message = e
             }
-            this.$root.$emit('flash', { message, type })
+            flash(message, type)
         }
     },
 
